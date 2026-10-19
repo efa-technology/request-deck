@@ -381,6 +381,7 @@
     <div class="step"><span class="n">3</span>Submitted</div>
   </nav>
   <div style="display:flex; gap:8px;">
+    <button class="btn" id="resetBtn" type="button">Reset</button>
     <button class="btn" id="saveDraft">Save draft</button>
   </div>
 </header>
@@ -431,7 +432,7 @@
       <div class="field"><div class="field-top"><label class="field-label" for="metaPrimary">Primary text <span class="req">*</span></label><span class="counter" id="metaPrimaryCount">0 / 500</span></div><textarea id="metaPrimary" data-key="metaPrimary" data-max="500" data-warn="450" placeholder="e.g. Tell people what the ad is about and why they should take action."></textarea><div class="meter"><span></span></div></div>
       <div class="field"><div class="field-top"><label class="field-label" for="metaHeadline">Headline (CTA) <span class="req">*</span></label><span class="counter" id="metaHeadlineCount">0 / 40</span></div><input type="text" id="metaHeadline" data-key="metaHeadline" data-max="40" data-warn="34" placeholder="e.g. Sign up for the event" /><div class="meter"><span></span></div></div>
       <div class="field"><div class="field-top"><label class="field-label" for="metaDescription">Description</label><span class="counter" id="metaDescriptionCount">0 / 90</span></div><input type="text" id="metaDescription" data-key="metaDescription" data-max="90" data-warn="80" placeholder="e.g. International Baccalaureate (IB) Info Session" /><div class="meter"><span></span></div></div>
-      <div class="two"><div class="field"><label class="field-label" for="landingType">Landing page type <span class="req">*</span></label><select id="landingType"><option value="" disabled selected>Choose URL or Form</option><option>URL</option><option>Form</option></select></div><div class="field"><label class="field-label" for="landingValue">Landing page <span class="req">*</span></label><input type="text" id="landingValue" placeholder="e.g. https://ef.com/event" /></div></div>
+      <div class="two"><div class="field"><label class="field-label" for="landingType">Landing page type <span class="req">*</span></label><select id="landingType"><option value="" disabled selected>Choose URL or Form</option><option>URL</option><option>Form</option></select></div><div class="field" id="landingValueField" hidden><label class="field-label" for="landingValue">Landing page URL <span class="req">*</span></label><input type="text" id="landingValue" placeholder="e.g. https://ef.com/event" /></div></div>
       <div class="field"><label class="field-label" for="adType">Type of an Ad <span class="req">*</span></label><select id="adType"><option value="" disabled selected>Choose an ad type</option><option>Single Image</option><option>Carousel</option><option>Video</option></select></div>
     </div>
 
@@ -897,7 +898,9 @@
 
     const s = state[currentLocale];
     const lfOk = !lfIncluded || (leadValid(s) && !leadOver(s));
-    const metaOk = s.metaPrimary && s.metaHeadline && $("landingType").value && s.landingValue && $("adType").value;
+    const isUrl = $("landingType").value === "URL";
+    $("landingValueField").hidden = !isUrl;
+    const metaOk = s.metaPrimary && s.metaHeadline && $("landingType").value && (!isUrl || s.landingValue.trim()) && $("adType").value;
     const asOk = s.asHeadline && s.asSubtext && s.asCta && !(s.asHeadline.length > 40 || s.asSubtext.length > 150 || s.asCta.length > 25);
     const setPill = (id, state, text) => {
       const p = $(id);
@@ -1020,7 +1023,7 @@
       metaHeadline: s.metaHeadline,
       metaDescription: s.metaDescription,
       landingPageType: $("landingType").value,
-      landingPage: s.landingValue,
+      landingPage: $("landingType").value === "URL" ? s.landingValue.trim() : "Form",
       adType: $("adType").value,
       creativeHeadline: s.asHeadline,
       creativeSubtext: s.asSubtext,
@@ -1086,6 +1089,22 @@
     $("notes").value = "";
     loadLocale(currentLocale);
   }
+
+  function resetAll() {
+    locales.forEach(l => Object.assign(state[l], { lfHeadline: "", lfSubtext: "", asHeadline: "", asSubtext: "", asCta: "", metaPrimary: "", metaHeadline: "", metaDescription: "", landingValue: "", lfQuestion: "", lfMeetingId: "", lfAnswers: ["", ""] }));
+    ["campaign", "market", "landingType", "adType"].forEach(id => $(id).selectedIndex = 0);
+    ["notes", "reqName", "reqEmail"].forEach(id => $(id).value = "");
+    const sw = $("lfSwitch");
+    if (sw.checked) { sw.checked = false; sw.dispatchEvent(new Event("change")); }
+    const first = document.querySelector("[data-ratio]");
+    if (first && !first.classList.contains("active")) first.click();
+    loadLocale(currentLocale);
+    setPreview("meta");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  $("resetBtn").addEventListener("click", () => {
+    if (confirm("Clear everything you've entered in this form?")) { resetAll(); toast("Form cleared."); }
+  });
 
   function closeOverlay() { $("overlay").classList.remove("show"); }
   $("closeConf").addEventListener("click", () => { closeOverlay(); if (lastSubmitOk) resetForm(); });
